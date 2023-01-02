@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   geometry_msgs
+  nav_msgs
+  tf
 )
 
 catkin_package(
@@ -38,4 +40,7 @@ add_executable(imu_test_node src/imu_pose_test.cpp)
 target_link_libraries(imu_test_node
   ${catkin_LIBRARIES}
 )
+
+add_executable(imu_tf_pose src/imu_tf_pose.cpp)
+target_link_libraries( imu_tf_pose ${catkin_LIBRARIES})# ${SERIAL_LIB}
 
