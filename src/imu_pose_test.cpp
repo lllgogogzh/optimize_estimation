@@ -4,6 +4,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <nav_msgs/Odometry.h>
 
 Eigen::Vector3d velocity(0.0,0.0,0.0);
 Eigen::Vector3d pose(0.0,0.0,0.0);
@@ -11,13 +12,15 @@ Eigen::Vector3d pose(0.0,0.0,0.0);
 Eigen::Vector3d velocity_last(0.0,0.0,0.0);
 Eigen::Vector3d pose_last(0.0,0.0,0.0);
 
-Eigen::Vector3d acc_last(0.0,0.0,9.83);
-Eigen::Vector3d g(0.0,0.0,-9.83);
+Eigen::Vector3d acc_last(0.0,0.0,9.81);
+Eigen::Vector3d g(0.0,0.0,-9.81);
 
 Eigen::Quaterniond Qwb(1.0,0.0,0.0,0.0);// wxyz
 Eigen::Vector3d gyro_last(0.0,0.0,0.0);
 
 double t_last;
+
+bool have_init_odom = false;
 
 class IMU_TEST
 {
@@ -25,9 +28,38 @@ class IMU_TEST
 
 };
 
+void odomCallbackFunc(nav_msgs::Odometry::ConstPtr msg){
+    if(have_init_odom) return;
+    have_init_odom = true;
+    pose(0) = msg->pose.pose.position.x;
+    pose(1) = msg->pose.pose.position.y;
+    pose(2) = msg->pose.pose.position.z;
+
+    velocity(0) = msg->twist.twist.linear.x;
+    velocity(1) = msg->twist.twist.linear.y;
+    velocity(2) = msg->twist.twist.linear.z;
+
+    Qwb.w() = msg->pose.pose.orientation.w;
+    Qwb.x() = msg->pose.pose.orientation.x;
+    Qwb.y() = msg->pose.pose.orientation.y;
+    Qwb.z() = msg->pose.pose.orientation.z;
+
+    gyro_last(0) = msg->twist.twist.angular.x;
+    gyro_last(1) = msg->twist.twist.angular.y;
+    gyro_last(2) = msg->twist.twist.angular.z;
+
+    t_last = msg->header.stamp.toSec();
+
+    // state_pv.segment(0, 3) = init_p;
+    // state_pv.segment(3, 3) = init_v;
+    // state_q = init_q;
+}
+
 
 void IMUCallbackFunc(sensor_msgs::ImuConstPtr msgptr)
 {
+    if(have_init_odom==false)
+        return;
     Eigen::Vector3d gyro_now(msgptr->angular_velocity.x,msgptr->angular_velocity.y,msgptr->angular_velocity.z);
     Eigen::Vector3d gyro_meas = 0.5*(gyro_now+gyro_last);
     gyro_last = gyro_now;
@@ -73,7 +105,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh;
 
     ros::Subscriber imu_sub = nh.subscribe<sensor_msgs::Imu>("/airsim_node/drone_1/imu/imu_enu",1,IMUCallbackFunc);
-
+    ros::Subscriber ground_truth_sub = nh.subscribe<nav_msgs::Odometry>("/airsim_node/drone_1/odom_local_enu",1,odomCallbackFunc);
     ros::Publisher pose_pub = nh.advertise<geometry_msgs::PoseStamped>("pose_test",1);
 
     //ros::spin();

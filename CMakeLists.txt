@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   tf
+  mavros
 )
 
 catkin_package(
@@ -33,6 +34,10 @@ include_directories(
   "/usr/include/eigen3"
 )
 
+add_library(
+  oplib
+  src/imu_ekf.cpp
+)
 
 add_executable(imu_test_node 
   src/imu_pose_test.cpp
@@ -40,6 +45,7 @@ add_executable(imu_test_node
 
 target_link_libraries(imu_test_node
   ${catkin_LIBRARIES}
+  oplib
 )
 
 add_executable(imu_tf_pose 
@@ -48,6 +54,7 @@ add_executable(imu_tf_pose
 
 target_link_libraries(imu_tf_pose 
   ${catkin_LIBRARIES}
+  oplib
 )# ${SERIAL_LIB}
 
 add_executable(dyna_pose_test
@@ -56,4 +63,15 @@ add_executable(dyna_pose_test
 
 target_link_libraries(dyna_pose_test 
   ${catkin_LIBRARIES}
+  oplib
 )
+
+add_executable(imu_ekf_node
+  src/imu_ekf_node.cpp
+)
+
+target_link_libraries(imu_ekf_node
+  ${catkin_LIBRARIES}
+  oplib
+)
+

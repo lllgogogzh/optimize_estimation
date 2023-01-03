@@ -7,3 +7,13 @@ rosbag xxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```
 
+
+
+#### new ekf 框架
+
+```shell
+catkin_make
+rosrun optimize_estimation imu_ekf_node
+rosbag xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
