@@ -2,10 +2,8 @@
 
 ```shell
 catkin_make
-rosrun optimize_estimation imu_test_node 或者
-rosrun optimize_estimation imu_tf_pose
+roslaunch optimize_estimation test.launch
 rosbag xxxxxxxxxxxxxxxxxxxxxxxxx
-rviz
 
 ```
 

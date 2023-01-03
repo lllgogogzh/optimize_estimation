@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+   <node name="rviz" pkg="rviz" type="rviz" output="screen"
+    args="-d $(find optimize_estimation)/config/common.rviz"> 
+  </node>
+
+  <!-- <node pkg="optimize_estimation" type="imu_test_node" name="imu_test_node" output="screen">
+  </node> -->
+
+  <!-- <node pkg="optimize_estimation" type="imu_tf_pose" name="imu_tf_pose" output="screen">
+  </node> -->
+
+  <node pkg="optimize_estimation" type="dyna_pose_test" name="dyna_pose_test_node" output="screen">
+  </node>
+
+</launch>

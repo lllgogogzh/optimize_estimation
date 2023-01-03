@@ -83,8 +83,12 @@ int main(int argc, char **argv)
         //pub
         geometry_msgs::PoseStamped posepub;
         posepub.pose.position.x=pose(0);
-        posepub.pose.position.y=-pose(1);
+        posepub.pose.position.y=pose(1);
         posepub.pose.position.z=pose(2);
+        posepub.pose.orientation.w = Qwb.w();
+        posepub.pose.orientation.x = Qwb.x();
+        posepub.pose.orientation.y = Qwb.y();
+        posepub.pose.orientation.z = Qwb.z();
         posepub.header.frame_id = "odom";
         posepub.header.stamp = ros::Time::now();
 

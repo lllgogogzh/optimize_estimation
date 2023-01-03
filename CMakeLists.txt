@@ -34,13 +34,26 @@ include_directories(
 )
 
 
-add_executable(imu_test_node src/imu_pose_test.cpp)
-
+add_executable(imu_test_node 
+  src/imu_pose_test.cpp
+)
 
 target_link_libraries(imu_test_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(imu_tf_pose src/imu_tf_pose.cpp)
-target_link_libraries( imu_tf_pose ${catkin_LIBRARIES})# ${SERIAL_LIB}
+add_executable(imu_tf_pose 
+  src/imu_tf_pose.cpp
+)
 
+target_link_libraries(imu_tf_pose 
+  ${catkin_LIBRARIES}
+)# ${SERIAL_LIB}
+
+add_executable(dyna_pose_test
+  src/dyna_pose_test.cpp
+)
+
+target_link_libraries(dyna_pose_test 
+  ${catkin_LIBRARIES}
+)
