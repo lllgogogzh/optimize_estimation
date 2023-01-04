@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   mavros
 )
+find_package(PythonLibs)
 
 catkin_package(
 
@@ -29,7 +30,8 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
- include
+  include
+  ${PYTHON_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   "/usr/include/eigen3"
 )
@@ -44,8 +46,14 @@ add_executable(imu_test_node
 )
 
 target_link_libraries(imu_test_node
+  ${PYTHON_LIBRARIES}
   ${catkin_LIBRARIES}
   oplib
+)
+
+target_include_directories(imu_test_node
+    PRIVATE 
+    ${PYTHON_INCLUDE_DIRS}
 )
 
 add_executable(imu_tf_pose 
@@ -53,17 +61,29 @@ add_executable(imu_tf_pose
 )
 
 target_link_libraries(imu_tf_pose 
+  ${PYTHON_LIBRARIES}
   ${catkin_LIBRARIES}
   oplib
 )# ${SERIAL_LIB}
+
+target_include_directories(imu_tf_pose 
+    PRIVATE 
+    ${PYTHON_INCLUDE_DIRS}
+)
 
 add_executable(dyna_pose_test
   src/dyna_pose_test.cpp
 )
 
-target_link_libraries(dyna_pose_test 
+target_link_libraries(dyna_pose_test
+  ${PYTHON_LIBRARIES}
   ${catkin_LIBRARIES}
   oplib
+)
+
+target_include_directories(dyna_pose_test
+    PRIVATE 
+    ${PYTHON_INCLUDE_DIRS}
 )
 
 add_executable(imu_ekf_node
@@ -71,7 +91,13 @@ add_executable(imu_ekf_node
 )
 
 target_link_libraries(imu_ekf_node
+  ${PYTHON_LIBRARIES}
   ${catkin_LIBRARIES}
   oplib
+)
+
+target_include_directories(imu_ekf_node
+    PRIVATE 
+    ${PYTHON_INCLUDE_DIRS}
 )
 

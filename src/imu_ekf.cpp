@@ -19,6 +19,8 @@ void IMUEKF::Initialize()
     imu_sub_ = nh_.subscribe<sensor_msgs::Imu>("/airsim_node/drone_1/imu/imu_enu",1,&IMUEKF::IMUCallbackFunc,this);
 
     ekf_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/imu_ekf_pose",1);
+    p_error_pub_ = nh_.advertise<std_msgs::Float64>("/p_error",1);
+    q_error_pub_ = nh_.advertise<std_msgs::Float64>("/q_error",1);
     is_pub_pose_ = true;
 
     //init value
@@ -33,6 +35,7 @@ void IMUEKF::Initialize()
     T_a_=0.0;
     t_last_=0.0;
     have_ta_ = false;
+    have_plot_ = false;
 
     init_p_ = Eigen::Vector3d::Zero();
     init_v_ = Eigen::Vector3d::Zero();
@@ -49,6 +52,9 @@ void IMUEKF::Initialize()
     acc_meas_covirance_(0,0) = sigma2;
     acc_meas_covirance_(1,1) = sigma2;
     acc_meas_covirance_(2,2) = sigma2;
+
+    p_errors_.clear();
+    q_errors_.clear();
 
     //Kalman
     P_last_  = Eigen::Matrix4d::Identity()*0;
@@ -80,10 +86,26 @@ void IMUEKF::CmdCallbackFunc(const mavros_msgs::AttitudeTarget msg)
         ROS_INFO("Lets do some ekf!!"); 
         EKF_Pose_Estimation();
         PublishEKFPose();
-        if(is_pub_pose_)
-        {
+        record_error();
+        // if(is_pub_pose_)
+        // {
 
+        // }
+
+        if((ros::Time::now().toSec() - start_time_) > 10.0){
+            if(!have_plot_){
+                have_plot_ = true;
+                // plt::figure();
+                // plt::plot(time_, p_errors_, {{"color", "black"}, {"marker", "o"}});
+                // plt::plot(time_, p_errors_);
+                // plt::axis("equal");
+                // plt::legend();
+                // plt::grid(true);
+                // plt::show();
+            }
+            
         }
+        
         // t_last_ = t_now_;
     }
     else if(system_state_ == SystemState::ERROR)
@@ -108,11 +130,6 @@ void IMUEKF::IMUCallbackFunc(const sensor_msgs::Imu msg)
 
 void IMUEKF::odomCallbackFunc(const nav_msgs::Odometry msg)
 {
-    if(have_init_odom_) 
-    {
-        return;
-    }
-    have_init_odom_ = true;
     init_p_(0) = msg.pose.pose.position.x;
     init_p_(1) = msg.pose.pose.position.y;
     init_p_(2) = msg.pose.pose.position.z;
@@ -129,7 +146,13 @@ void IMUEKF::odomCallbackFunc(const nav_msgs::Odometry msg)
     init_w_(0) = msg.twist.twist.angular.x;
     init_w_(1) = msg.twist.twist.angular.y;
     init_w_(2) = msg.twist.twist.angular.z;
-
+    if(have_init_odom_) 
+    {
+        return;
+    }
+    have_init_odom_ = true;
+    
+    start_time_ = ros::Time::now().toSec();
     state_pv_.segment(0, 3) = init_p_;
     state_pv_.segment(3, 3) = init_v_;
     state_q_ = init_q_;
@@ -184,6 +207,7 @@ void IMUEKF::EKF_Pose_Estimation2()
 void IMUEKF::EKF_Pose_Estimation()
 {
     // UpdateStatePV();
+    UpdateStatePV_dyna();
     //TODO EKF
 
     //Predicit
@@ -241,9 +265,7 @@ void IMUEKF::EKF_Pose_Estimation()
     //update the optimize estimation
     state_q_ = x_est;
     P_last_ = P_est;
-
-    // PublishEKFPose();
-    UpdateStatePV_dyna();
+    
 }
 
 void IMUEKF::UpdateStatePV()
@@ -309,3 +331,19 @@ void IMUEKF::PublishEKFPose()
     ekf_pose_pub_.publish(pubpose);
 }
 
+void IMUEKF::record_error(){
+    double pe = (state_pv_.segment(0, 3) - init_p_).norm();
+    Eigen::Quaterniond q_true(init_q_(0), init_q_(1), init_q_(2), init_q_(3));
+    Eigen::Quaterniond q_est(state_q_(0), state_q_(1), state_q_(2), state_q_(3));
+    Eigen::Matrix3d diff_r = q_true.toRotationMatrix() * q_est.toRotationMatrix().transpose();
+    double qe = acos((diff_r.trace() - 1) / 2) * 180 / M_PI;
+    p_errors_.push_back(pe);
+    q_errors_.push_back(qe);
+    time_.push_back(ros::Time::now().toSec() - start_time_);
+
+    std_msgs::Float64 msg;
+    msg.data = pe;
+    p_error_pub_.publish(msg);
+    msg.data = qe;
+    q_error_pub_.publish(msg);
+}

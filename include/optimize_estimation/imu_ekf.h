@@ -7,6 +7,9 @@
 #include <nav_msgs/Odometry.h>
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include "optimize_estimation/matplotlibcpp.h"
+
+namespace plt = matplotlibcpp;
 
 class IMUEKF
 {
@@ -21,23 +24,20 @@ class IMUEKF
 
         };
 
-        IMUEKF(ros::NodeHandle &nh);
+        IMUEKF(ros::NodeHandle &_nh);
 
-    public:
     //for ROS
         ros::NodeHandle nh_; 
         ros::Subscriber odom_sub_;
         ros::Subscriber imu_sub_;
-        //ros::Subscriber t_a_sub = nh.subscribe<std_msgs::Float64>("/airsim_node/drone_1/t_a",1,TaCallbackFunc);
-        //ros::Subscriber cmd_sub = nh.subscribe<mavros_msgs::AttitudeTarget>("/airsim_node/drone_1/angle_rate_throttle_enu",1,CmdCallbackFunc);
         ros::Subscriber t_a_sub_;
         ros::Subscriber cmd_sub_;
 
         ros::Publisher only_imu_pose_pub_;
         ros::Publisher only_process_pose_pub_;
-        ros::Publisher ekf_pose_pub_;
+        ros::Publisher ekf_pose_pub_, p_error_pub_, q_error_pub_;
 
-        bool is_pub_pose_;
+        bool is_pub_pose_, have_plot_;
         void PublishEKFPose();
 
     //Callback function
@@ -59,7 +59,6 @@ class IMUEKF
             return mat;
         }
 
-    public:
     //for initial value
         Eigen::Vector3d init_p_;
         Eigen::Vector3d init_v_;
@@ -68,6 +67,10 @@ class IMUEKF
         bool have_init_odom_;
         Eigen::Matrix4d Pq_hat_, Pq_est_;
         Eigen::MatrixXd Kq_;
+        std::vector<double> p_errors_;
+        std::vector<double> q_errors_;
+        std::vector<double> time_;
+        double start_time_;
 
         enum SystemState
         {
@@ -78,7 +81,6 @@ class IMUEKF
 
         int system_state_;
 
-    public:
     //for process value
         double T_a_;
         bool have_ta_;
@@ -111,18 +113,16 @@ class IMUEKF
 
         Eigen::Matrix4d P_last_;
 
-    public:
     //for EKF
         void EKF_Pose_Estimation();
         void EKF_Pose_Estimation2();
+        
 
     //we can have some value in here
         Eigen::Matrix<double,4,3> H_;
         void JacobianMeasurement();
 
-
-
-    public:
     //other functions
         void Initialize();
+        void record_error();
 };
