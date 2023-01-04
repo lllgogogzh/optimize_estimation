@@ -43,15 +43,15 @@ void IMUEKF::Initialize()
     acc_meas_ = Eigen::Vector3d::Zero();
     gyro_meas_ = Eigen::Vector3d::Zero();
     have_imu_ = false;
-    gw_<<0.0,0.0,-9.80;
+    gw_<<0.0,0.0,-9.78;
 
-    double sigma2 = 0.05;
+    double sigma2 = 0.15;
     acc_meas_covirance_(0,0) = sigma2;
     acc_meas_covirance_(1,1) = sigma2;
     acc_meas_covirance_(2,2) = sigma2;
 
     //Kalman
-    P_last_  = Eigen::Matrix4d::Identity()*0.00;
+    P_last_  = Eigen::Matrix4d::Identity()*0;
 }
 
 void IMUEKF::CmdCallbackFunc(const mavros_msgs::AttitudeTarget msg)
@@ -183,7 +183,6 @@ void IMUEKF::EKF_Pose_Estimation2()
 
 void IMUEKF::EKF_Pose_Estimation()
 {
-    UpdateStatePV_dyna();
     // UpdateStatePV();
     //TODO EKF
 
@@ -195,13 +194,14 @@ void IMUEKF::EKF_Pose_Estimation()
     double dt = t_now_-t_last_;
     Eigen::Matrix4d Fq = Eigen::Matrix4d::Identity();
     Eigen::MatrixXd Gq(4, 3);
-    Eigen::Matrix4d Qq = Eigen::Matrix4d::Identity() * 0;
+    Eigen::Matrix4d Qq = Eigen::Matrix4d::Identity() * 1e-8 ;
     double qw = state_q_(0), qx = state_q_(1), qy = state_q_(2), qz = state_q_(3);
     Gq << -qx, -qy, -qz, qw, -qz, qy, qz, qw, -qx, -qy, qx, qw;
     Gq = Gq * dt / 2;
     x_pred = Fq * state_q_ + Gq * last_tw_.segment(1, 3);
     x_pred.normalize();
 
+    //P_pred = Fq*P_last_*Fq.transpose()+Gq*Qq*Gq.transpose();//Gq*Qq*Gq.transpose();
     P_pred = Fq*P_last_*Fq.transpose()+Qq;//Gq*Qq*Gq.transpose();
 
     //Kalman Update
@@ -215,7 +215,7 @@ void IMUEKF::EKF_Pose_Estimation()
     H << -q2 , q3 , -q0 , q1,
                q1 , q0 , q3 , q2,
                q0 , -q1 , -q2 , q3;
-    
+    H=2*H;
     //Kalman zengyi K
     Eigen::Matrix<double,4,3> K;
     Eigen::Matrix<double,3,3> T;
@@ -234,7 +234,7 @@ void IMUEKF::EKF_Pose_Estimation()
     //gk : in the measurement function with x_pred
     gk(0) = 2*x_pred(1)*x_pred(3) - 2*x_pred(0)*x_pred(2);
     gk(1) = 2*x_pred(2)*x_pred(3) - 2*x_pred(0)*x_pred(1);
-    gk(2) = x_pred(0)*x_pred(0) - x_pred(1)*x_pred(1) - x_pred(2)*x_pred(2) - x_pred(3)*x_pred(3);
+    gk(2) = x_pred(0)*x_pred(0) - x_pred(1)*x_pred(1) - x_pred(2)*x_pred(2) + x_pred(3)*x_pred(3);
     P_est=(Eigen::Matrix4d::Identity() - K*H)*P_pred;
     x_est=x_pred + K*(y - gk);
     x_est.normalize();
@@ -243,6 +243,7 @@ void IMUEKF::EKF_Pose_Estimation()
     P_last_ = P_est;
 
     // PublishEKFPose();
+    UpdateStatePV_dyna();
 }
 
 void IMUEKF::UpdateStatePV()
@@ -276,7 +277,7 @@ void IMUEKF::UpdateStatePV()
 
 void IMUEKF::UpdateStatePV_dyna()
 {
-    //update pv by imu
+    //update pv by dyna
     double dt = t_now_ - t_last_;
 
     Eigen::MatrixXd Fp = Eigen::MatrixXd::Identity(6, 6);
