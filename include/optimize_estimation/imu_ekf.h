@@ -37,6 +37,9 @@ class IMUEKF
         ros::Publisher only_process_pose_pub_;
         ros::Publisher ekf_pose_pub_;
 
+        bool is_pub_pose_;
+        void PublishEKFPose();
+
     //Callback function
         void TaCallbackFunc(const std_msgs::Float64 msg)
         {
@@ -72,6 +75,7 @@ class IMUEKF
         double T_a_;
         bool have_ta_;
         double t_last_;
+        double t_now_;
         Eigen::Vector3d acc_last_;
         Eigen::Vector3d gyro_last_;
         Eigen::Vector4d last_tw_;
@@ -82,6 +86,9 @@ class IMUEKF
         Eigen::Vector3d gyro_meas_;
         Eigen::Matrix3d acc_meas_covirance_; // this is not be initilized !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         Eigen::Matrix3d gyro_meas_covirance_;
+        Eigen::Vector3d gw_;
+
+        void UpdateStatePV();
         //double t_imu_;
     
     //state
@@ -92,6 +99,8 @@ class IMUEKF
         Eigen::Vector3d state_p_;
         Eigen::Vector3d state_v_;
         Eigen::VectorXd state_pv_;
+
+        Eigen::Matrix4d P_last_;
 
     public:
     //for EKF
