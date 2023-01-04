@@ -53,6 +53,12 @@ class IMUEKF
 
         void IMUCallbackFunc(const sensor_msgs::Imu msg);
 
+        Eigen::Matrix3d cross_mat(Eigen::Vector3d vec){
+            Eigen::Matrix3d mat;
+            mat << 0, -vec(2), vec(1), vec(2), 0, -vec(0), -vec(1), vec(0), 0;
+            return mat;
+        }
+
     public:
     //for initial value
         Eigen::Vector3d init_p_;
@@ -60,6 +66,8 @@ class IMUEKF
         Eigen::Vector4d init_q_;
         Eigen::Vector3d init_w_;
         bool have_init_odom_;
+        Eigen::Matrix4d Pq_hat_, Pq_est_;
+        Eigen::MatrixXd Kq_;
 
         enum SystemState
         {
@@ -89,6 +97,7 @@ class IMUEKF
         Eigen::Vector3d gw_;
 
         void UpdateStatePV();
+        void UpdateStatePV_dyna();
         //double t_imu_;
     
     //state
@@ -105,6 +114,7 @@ class IMUEKF
     public:
     //for EKF
         void EKF_Pose_Estimation();
+        void EKF_Pose_Estimation2();
 
     //we can have some value in here
         Eigen::Matrix<double,4,3> H_;

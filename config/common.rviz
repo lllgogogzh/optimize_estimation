@@ -64,7 +64,7 @@ Visualization Manager:
       Shaft Length: 1
       Shaft Radius: 0.05000000074505806
       Shape: Axes
-      Topic: /pose_test
+      Topic: /imu_ekf_pose
       Unreliable: false
       Value: true
     - Angle Tolerance: 0.009999999776482582
@@ -102,6 +102,22 @@ Visualization Manager:
       Topic: /airsim_node/drone_1/odom_local_enu
       Unreliable: false
       Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualizer/trajectory
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
+    - Class: rviz/Marker
+      Enabled: true
+      Marker Topic: /visualizer/waypoints
+      Name: Marker
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -130,7 +146,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 42.77423095703125
+      Distance: 40.842079162597656
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -166,5 +182,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1200
-  X: 60
-  Y: 44
+  X: 575
+  Y: 90

@@ -11,7 +11,10 @@
   <!-- <node pkg="optimize_estimation" type="imu_tf_pose" name="imu_tf_pose" output="screen">
   </node> -->
 
-  <node pkg="optimize_estimation" type="dyna_pose_test" name="dyna_pose_test_node" output="screen">
+  <!-- <node pkg="optimize_estimation" type="dyna_pose_test" name="dyna_pose_test_node" output="screen">
+  </node> -->
+
+  <node pkg="optimize_estimation" type="imu_ekf_node" name="imu_ekf_node" output="screen">
   </node>
 
 </launch>
