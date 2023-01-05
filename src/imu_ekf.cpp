@@ -21,12 +21,16 @@ void IMUEKF::Initialize()
     ekf_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/imu_ekf_pose",1);
     p_error_pub_ = nh_.advertise<std_msgs::Float64>("/p_error",1);
     q_error_pub_ = nh_.advertise<std_msgs::Float64>("/q_error",1);
+    only_imu_pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/imu_pose",1);
     is_pub_pose_ = true;
 
     //init value
     state_pv_ = Eigen::VectorXd::Zero(6);
+    state_pv_imu_ = Eigen::VectorXd::Zero(6);
     state_q_=Eigen::Vector4d::Zero();
     state_q_(0)=1; // wxyz
+    state_q_imu_ = Eigen::Vector4d::Zero();
+    state_q_imu_(0) = 1;
 
     acc_last_ = Eigen::Vector3d::Zero();
     gyro_last_ = Eigen::Vector3d::Zero();
@@ -48,7 +52,7 @@ void IMUEKF::Initialize()
     have_imu_ = false;
     gw_<<0.0,0.0,-9.78;
 
-    double sigma2 = 0.15;
+    double sigma2 = 0.3;
     acc_meas_covirance_(0,0) = sigma2;
     acc_meas_covirance_(1,1) = sigma2;
     acc_meas_covirance_(2,2) = sigma2;
@@ -92,16 +96,16 @@ void IMUEKF::CmdCallbackFunc(const mavros_msgs::AttitudeTarget msg)
 
         // }
 
-        if((ros::Time::now().toSec() - start_time_) > 10.0){
+        if((ros::Time::now().toSec() - start_time_) > 120.0){
             if(!have_plot_){
                 have_plot_ = true;
-                // plt::figure();
-                // plt::plot(time_, p_errors_, {{"color", "black"}, {"marker", "o"}});
-                // plt::plot(time_, p_errors_);
-                // plt::axis("equal");
-                // plt::legend();
-                // plt::grid(true);
-                // plt::show();
+                plt::figure();
+                plt::plot(time_, p_errors_, {{"color", "black"}, {"marker", "o"}});
+                plt::plot(time_, p_errors_);
+                plt::axis("equal");
+                plt::legend();
+                plt::grid(true);
+                plt::show();
             }
             
         }
@@ -146,6 +150,7 @@ void IMUEKF::odomCallbackFunc(const nav_msgs::Odometry msg)
     init_w_(0) = msg.twist.twist.angular.x;
     init_w_(1) = msg.twist.twist.angular.y;
     init_w_(2) = msg.twist.twist.angular.z;
+    state_z_ = init_p_(2);
     if(have_init_odom_) 
     {
         return;
@@ -157,6 +162,9 @@ void IMUEKF::odomCallbackFunc(const nav_msgs::Odometry msg)
     state_pv_.segment(3, 3) = init_v_;
     state_q_ = init_q_;
     gyro_last_ = init_w_;
+    state_pv_imu_.segment(0,3) = init_p_;
+    state_pv_imu_.segment(3,3) = init_v_;
+    state_q_imu_ = init_q_;
 }
 
 void IMUEKF::EKF_Pose_Estimation2()
@@ -208,6 +216,7 @@ void IMUEKF::EKF_Pose_Estimation()
 {
     // UpdateStatePV();
     UpdateStatePV_dyna();
+    UpdateStatePV();
     //TODO EKF
 
     //Predicit
@@ -218,7 +227,7 @@ void IMUEKF::EKF_Pose_Estimation()
     double dt = t_now_-t_last_;
     Eigen::Matrix4d Fq = Eigen::Matrix4d::Identity();
     Eigen::MatrixXd Gq(4, 3);
-    Eigen::Matrix4d Qq = Eigen::Matrix4d::Identity() * 1e-8 ;
+    Eigen::Matrix4d Qq = Eigen::Matrix4d::Identity() * 1e-9;
     double qw = state_q_(0), qx = state_q_(1), qy = state_q_(2), qz = state_q_(3);
     Gq << -qx, -qy, -qz, qw, -qz, qy, qz, qw, -qx, -qy, qx, qw;
     Gq = Gq * dt / 2;
@@ -236,9 +245,12 @@ void IMUEKF::EKF_Pose_Estimation()
     q1 = state_q_(1);
     q2 = state_q_(2);
     q3 = state_q_(3);
+    // H << -q2 , q3 , -q0 , q1,
+    //            q1 , q0 , q3 , q2,
+    //            q0 , -q1 , -q2 , q3;
     H << -q2 , q3 , -q0 , q1,
                q1 , q0 , q3 , q2,
-               q0 , -q1 , -q2 , q3;
+               0 , -2*q1 , -2*q2 , 0;
     H=2*H;
     //Kalman zengyi K
     Eigen::Matrix<double,4,3> K;
@@ -275,12 +287,13 @@ void IMUEKF::UpdateStatePV()
 
     Eigen::Quaterniond delta_q;
     Eigen::Vector3d gyro_now_ = 0.5*(gyro_last_+gyro_meas_);
+    gyro_last_ = gyro_now_;
     delta_q.w()=1.0;
     delta_q.x()=gyro_now_.x()*dt*0.5;
     delta_q.y()=gyro_now_.y()*dt*0.5;
     delta_q.z()=gyro_now_.z()*dt*0.5;
 
-    Eigen::Quaterniond Qwb(state_q_(0),state_q_(1),state_q_(2),state_q_(3));
+    Eigen::Quaterniond Qwb(state_q_imu_(0),state_q_imu_(1),state_q_imu_(2),state_q_imu_(3));
 
     Eigen::Matrix3d R_now = Qwb.normalized().toRotationMatrix();
     Eigen::Vector3d acc_w_now = R_now*acc_meas_+gw_;
@@ -290,11 +303,12 @@ void IMUEKF::UpdateStatePV()
     //Eigen::Vector3d acc = 0.5*(R_now*(acc_last+g)+R_last*(acc_meas+g));
 
     Qwb = Qwb.normalized()*delta_q.normalized();
-    state_v_ = state_v_+ acc* dt;
-    state_p_ = state_p_ +state_v_ * dt + 0.5* acc *dt*dt;
-
-    state_pv_.segment(0,3) = state_p_;
-    state_pv_.segment(3,3) = state_v_;
+    state_pv_imu_.segment(3,3) = state_pv_imu_.segment(3,3)+ acc* dt;
+    state_pv_imu_.segment(0,3) = state_pv_imu_.segment(0,3) +state_pv_imu_.segment(3,3) * dt + 0.5* acc *dt*dt;
+    state_q_imu_(0)=Qwb.w();
+    state_q_imu_(1)=Qwb.x();
+    state_q_imu_(2)=Qwb.y();
+    state_q_imu_(3)=Qwb.z();
 }
 
 void IMUEKF::UpdateStatePV_dyna()
@@ -326,12 +340,33 @@ void IMUEKF::PublishEKFPose()
 
     pubpose.pose.position.x = state_pv_(0);
     pubpose.pose.position.y = state_pv_(1);
-    pubpose.pose.position.z = state_pv_(2);
+    //pubpose.pose.position.z = state_pv_(2);
+    pubpose.pose.position.z = state_z_;
 
     ekf_pose_pub_.publish(pubpose);
+
+    //pub  imu pose
+    geometry_msgs::PoseStamped pubimupose;
+    pubimupose.header.frame_id = "odom";
+    pubimupose.header.stamp = ros::Time::now();
+
+    pubimupose.pose.orientation.w = state_q_imu_(0);
+    pubimupose.pose.orientation.x = state_q_imu_(1);
+    pubimupose.pose.orientation.y = state_q_imu_(2);
+    pubimupose.pose.orientation.z = state_q_imu_(3);
+
+    pubimupose.pose.position.x = state_pv_imu_(0);
+    pubimupose.pose.position.y = state_pv_imu_(1);
+    //pubpose.pose.position.z = state_pv_(2);
+    pubimupose.pose.position.z = state_z_;
+
+    only_imu_pose_pub_.publish(pubimupose);
+
+    
 }
 
-void IMUEKF::record_error(){
+void IMUEKF::record_error()
+{
     double pe = (state_pv_.segment(0, 3) - init_p_).norm();
     Eigen::Quaterniond q_true(init_q_(0), init_q_(1), init_q_(2), init_q_(3));
     Eigen::Quaterniond q_est(state_q_(0), state_q_(1), state_q_(2), state_q_(3));

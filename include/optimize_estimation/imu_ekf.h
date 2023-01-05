@@ -110,6 +110,13 @@ class IMUEKF
         Eigen::Vector3d state_p_;
         Eigen::Vector3d state_v_;
         Eigen::VectorXd state_pv_;
+        double state_z_;
+
+    //imu state for duibi
+        Eigen::Vector4d state_q_imu_;
+        Eigen::Vector3d state_p_imu_;
+        Eigen::Vector3d state_v_imu_;
+        Eigen::VectorXd state_pv_imu_;
 
         Eigen::Matrix4d P_last_;
 
