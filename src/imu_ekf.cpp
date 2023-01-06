@@ -59,6 +59,7 @@ void IMUEKF::Initialize()
 
     p_errors_.clear();
     q_errors_.clear();
+    T_a_list_.clear();
 
     //Kalman
     P_last_  = Eigen::Matrix4d::Identity()*0;
@@ -101,7 +102,8 @@ void IMUEKF::CmdCallbackFunc(const mavros_msgs::AttitudeTarget msg)
                 have_plot_ = true;
                 plt::figure();
                 plt::plot(time_, p_errors_, {{"color", "black"}, {"marker", "o"}});
-                plt::plot(time_, p_errors_);
+                // plt::plot(time_, q_errors_);
+                // plt::plot(time_, T_a_list_);
                 plt::axis("equal");
                 plt::legend();
                 plt::grid(true);
@@ -374,6 +376,7 @@ void IMUEKF::record_error()
     double qe = acos((diff_r.trace() - 1) / 2) * 180 / M_PI;
     p_errors_.push_back(pe);
     q_errors_.push_back(qe);
+    T_a_list_.push_back(T_a_);
     time_.push_back(ros::Time::now().toSec() - start_time_);
 
     std_msgs::Float64 msg;

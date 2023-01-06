@@ -70,6 +70,7 @@ class IMUEKF
         std::vector<double> p_errors_;
         std::vector<double> q_errors_;
         std::vector<double> time_;
+        std::vector<double> T_a_list_;
         double start_time_;
 
         enum SystemState
