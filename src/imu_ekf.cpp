@@ -104,9 +104,12 @@ void IMUEKF::CmdCallbackFunc(const mavros_msgs::AttitudeTarget msg)
                 plt::plot(time_, p_errors_, {{"color", "black"}, {"marker", "o"}});
                 // plt::plot(time_, q_errors_);
                 // plt::plot(time_, T_a_list_);
+                plt::ylabel("油门归一化系数");
                 plt::axis("equal");
                 plt::legend();
                 plt::grid(true);
+                plt::xlabel("t(s)");
+
                 plt::show();
             }
             
